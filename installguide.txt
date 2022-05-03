@@ -1,0 +1,2 @@
+https://developer.nvidia.com/compute/machine-learning/cudnn/secure/8.1.0.77/11.2_20210127/cudnn-11.2-windows-x64-v8.1.0.77.zip
+https://developer.nvidia.com/cuda-11.2.1-download-archive
