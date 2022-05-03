@@ -174,10 +174,10 @@ def _recursive_generator_split(
     # and remove it afterwards.
     time = np.full(shape=(1,), fill_value=0.5, dtype=np.float32)
     ##
-    patches__1 = util.image_to_patches(frame1, blockshape)
-    patches_1 = np.expand_dims(patches__1, axis=0)
-    patches__2 = util.image_to_patches(frame2, blockshape)
-    patches_2 = np.expand_dims(patches__2, axis=0)
+    patches__1 = np.expand_dims(frame1, axis=0)
+    patches_1 = util.image_to_patches(patches__1, blockshape)
+    patches__2 = np.expand_dims(frame2, axis=0)
+    patches_2 = util.image_to_patches(patches__2, blockshape)
     output_patches = []
     for image_1, image_2 in zip(patches_1, patches_2):
       image_batch_1 = np.expand_dims(image_1, axis=0)
