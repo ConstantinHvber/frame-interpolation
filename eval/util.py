@@ -151,10 +151,50 @@ def _recursive_generator(
     yield from _recursive_generator(mid_frame, frame2, num_recursions - 1,
                                     interpolator)
 
+def _recursive_generator_split(
+    frame1: np.ndarray, frame2: np.ndarray, num_recursions: int,
+    interpolator: interpolator_lib.Interpolator, block=[4,4]
+) -> Generator[np.ndarray, None, None]:
+  """Splits halfway to repeatedly generate more frames.
+
+  Args:
+    frame1: Input image 1.
+    frame2: Input image 2.
+    num_recursions: How many times to interpolate the consecutive image pairs.
+    interpolator: The frame interpolator instance.
+
+  Yields:
+    The interpolated frames, including the first frame (frame1), but excluding
+    the final frame2.
+  """
+  if num_recursions == 0:
+    yield frame1
+  else:
+    # Adds the batch dimension to all inputs before calling the interpolator,
+    # and remove it afterwards.
+    time = np.full(shape=(1,), fill_value=0.5, dtype=np.float32)
+    ##
+    patches_1 = util.image_to_patches(frame1, block)
+    patches_2 = util.image_to_patches(frame2, block)
+    
+    output_patches = []
+    for image_1, image_2 in zip(patches_1, patches_2):
+      image_batch_1 = np.expand_dims(image_1, axis=0)
+      image_batch_2 = np.expand_dims(image_2, axis=0)
+      mid_patch = interpolator.interpolate(image_batch_1, image_batch_2, time)
+      output_patches.append(mid_patch)
+    output_patches = np.concatenate(output_patches, axis=0)
+    mid_frame = util.patches_to_image(output_patches, block)[0]
+    ##
+    yield from _recursive_generator(frame1, mid_frame, num_recursions - 1,
+                                    interpolator,block)
+    yield from _recursive_generator(mid_frame, frame2, num_recursions - 1,
+                                    interpolator,block)
+
 
 def interpolate_recursively_from_files(
     frames: List[str], times_to_interpolate: int,
-    interpolator: interpolator_lib.Interpolator) -> Iterable[np.ndarray]:
+    interpolator: interpolator_lib.Interpolator, block=[0,0]) -> Iterable[np.ndarray]:
   """Generates interpolated frames by repeatedly interpolating the midpoint.
 
   Loads the files on demand and uses the yield paradigm to return the frames
@@ -175,9 +215,14 @@ def interpolate_recursively_from_files(
   """
   n = len(frames)
   for i in range(1, n):
-    yield from _recursive_generator(
-        util.read_image(frames[i - 1]), util.read_image(frames[i]),
-        times_to_interpolate, interpolator)
+    if block==[0,0]:
+      yield from _recursive_generator(
+          util.read_image(frames[i - 1]), util.read_image(frames[i]),
+          times_to_interpolate, interpolator)
+    else:
+      yield from _recursive_generator_split(
+          util.read_image(frames[i - 1]), util.read_image(frames[i]),
+          times_to_interpolate, interpolator,block)
   # Separately yield the final frame.
   yield util.read_image(frames[-1])
 

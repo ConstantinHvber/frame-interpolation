@@ -105,7 +105,11 @@ _OUTPUT_VIDEO = flags.DEFINE_boolean(
     default=False,
     help='If true, creates a video of the frames in the interpolated_frames/ '
     'subdirectory')
-
+_BLOCK = flags.DEFINE_integer(
+    name='Block',
+    default=0,
+    help='If true, creates a video of the frames in the interpolated_frames/ '
+    'subdirectory')
 # Add other extensions, if not either.
 _INPUT_EXT = ['png', 'jpg', 'jpeg']
 
@@ -155,7 +159,7 @@ class ProcessDirectory(beam.DoFn):
     logging.info('Generating in-between frames for %s.', directory)
     frames = list(
         util.interpolate_recursively_from_files(
-            input_frames, _TIMES_TO_INTERPOLATE.value, self.interpolator))
+            input_frames, _TIMES_TO_INTERPOLATE.value, self.interpolator,block=[_BLOCK.value,_BLOCK.value]))
     _output_frames(frames, os.path.join(directory, 'interpolated_frames'))
     if _OUTPUT_VIDEO.value:
       media.write_video(f'{directory}/interpolated.mp4', frames, fps=_FPS.value)
