@@ -108,13 +108,16 @@ _OUTPUT_VIDEO = flags.DEFINE_boolean(
 _BLOCK = flags.DEFINE_list(
     name='block',
     default=[0,0],
-    help='If true, creates a video of the frames in the interpolated_frames/ '
+    help='Splits images into smaller blocks with this size'
     'subdirectory')
 _PADDING = flags.DEFINE_list(
     name='pad',
     default=[0,0],
-    help='If true, creates a video of the frames in the interpolated_frames/ '
-    'subdirectory')
+    help='Paddes the blocks')
+_CUDAGPU = flags.DEFINE_string(
+    name='gpu',
+    default="0",
+    help='The GPU the script will use')
 # Add other extensions, if not either.
 _INPUT_EXT = ['png', 'jpg', 'jpeg']
 
@@ -155,11 +158,7 @@ class ProcessDirectory(beam.DoFn):
       media.set_ffmpeg(ffmpeg_path)
 
   def process(self, directory: str):
-    logging.info("{} {}".format(type(_BLOCK.value),_BLOCK.value))
-    try:
-      logging.info("{} {}".format(type(_BLOCK.value[1]),_BLOCK.value[1]))
-    except:
-      pass
+    os.environ["CUDA_VISIBLE_DEVICES"]=_CUDAGPU.value
     
     input_frames_list = [
         natsort.natsorted(tf.io.gfile.glob(f'{directory}/*.{ext}'))
