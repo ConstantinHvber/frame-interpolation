@@ -59,7 +59,7 @@ def write_image(filename: str, image: np.ndarray) -> None:
   tf.io.write_file(filename, image_data)
 
 
-def image_to_patches(image: np.ndarray, block_shape: List[int]) -> np.ndarray:
+def image_to_patches(image: np.ndarray, block_shape: List[int], _pad: List[int]) -> np.ndarray:
   """Folds an image into patches and stacks along the batch dimension.
 
   Args:
@@ -71,6 +71,9 @@ def image_to_patches(image: np.ndarray, block_shape: List[int]) -> np.ndarray:
     The extracted patches shaped [num_blocks, patch_height, patch_width,...],
       with num_blocks = block_shape[0] * block_shape[1].
   """
+  
+  paddings = 2*[_pad]
+  
   block_height, block_width = block_shape
   num_blocks = block_height * block_width
 
@@ -85,7 +88,6 @@ def image_to_patches(image: np.ndarray, block_shape: List[int]) -> np.ndarray:
   ), 'block_width=%d should evenly divide width=%d.'%(block_width, width)
 
   patch_size = patch_height * patch_width
-  paddings = 2*[[0, 0]]
 
   patches = tf.space_to_batch(image, [patch_height, patch_width], paddings)
   patches = tf.split(patches, patch_size, 0)
@@ -95,7 +97,7 @@ def image_to_patches(image: np.ndarray, block_shape: List[int]) -> np.ndarray:
   return patches.numpy()
 
 
-def patches_to_image(patches: np.ndarray, block_shape: List[int]) -> np.ndarray:
+def patches_to_image(patches: np.ndarray, block_shape: List[int], _pad : List[int]) -> np.ndarray:
   """Unfolds patches (stacked along batch) into an image.
 
   Args:
@@ -106,8 +108,10 @@ def patches_to_image(patches: np.ndarray, block_shape: List[int]) -> np.ndarray:
   Returns:
     The unfolded image shaped [B, H, W, C].
   """
+  paddings = 2 * [_pad]
+  
   block_height, block_width = block_shape
-  paddings = 2 * [[0, 0]]
+  
 
   patch_height, patch_width, channel = patches.shape[-3:]
   patch_size = patch_height * patch_width
@@ -124,7 +128,7 @@ def patches_to_image(patches: np.ndarray, block_shape: List[int]) -> np.ndarray:
 
 def _recursive_generator(
     frame1: np.ndarray, frame2: np.ndarray, num_recursions: int,
-    interpolator: interpolator_lib.Interpolator
+    interpolator: interpolator_lib.Interpolator, pad: List[int]
 ) -> Generator[np.ndarray, None, None]:
   """Splits halfway to repeatedly generate more frames.
 
@@ -147,13 +151,13 @@ def _recursive_generator(
     mid_frame = interpolator.interpolate(
         np.expand_dims(frame1, axis=0), np.expand_dims(frame2, axis=0), time)[0]
     yield from _recursive_generator(frame1, mid_frame, num_recursions - 1,
-                                    interpolator)
+                                    interpolator,pad)
     yield from _recursive_generator(mid_frame, frame2, num_recursions - 1,
-                                    interpolator)
+                                    interpolator,pad)
 
 def _recursive_generator_split(
     frame1: np.ndarray, frame2: np.ndarray, num_recursions: int,
-    interpolator: interpolator_lib.Interpolator, blockshape=[4,4]
+    interpolator: interpolator_lib.Interpolator, blockshape: List[int], pad: List[int]
 ) -> Generator[np.ndarray, None, None]:
   """Splits halfway to repeatedly generate more frames.
 
@@ -175,9 +179,9 @@ def _recursive_generator_split(
     time = np.full(shape=(1,), fill_value=0.5, dtype=np.float32)
     ##
     patches__1 = np.expand_dims(frame1, axis=0)
-    patches_1 = util.image_to_patches(patches__1, blockshape)
+    patches_1 = util.image_to_patches(patches__1, blockshape,pad)
     patches__2 = np.expand_dims(frame2, axis=0)
-    patches_2 = util.image_to_patches(patches__2, blockshape)
+    patches_2 = util.image_to_patches(patches__2, blockshape,pad)
     output_patches = []
     for image_1, image_2 in zip(patches_1, patches_2):
       image_batch_1 = np.expand_dims(image_1, axis=0)
@@ -185,17 +189,17 @@ def _recursive_generator_split(
       mid_patch = interpolator.interpolate(image_batch_1, image_batch_2, time)
       output_patches.append(mid_patch)
     output_patches = np.concatenate(output_patches, axis=0)
-    mid_frame = util.patches_to_image(output_patches, blockshape)[0]
+    mid_frame = util.patches_to_image(output_patches, blockshape,pad)[0]
     ##
     yield from _recursive_generator_split(frame1, mid_frame, num_recursions - 1,
-                                    interpolator,blockshape)
+                                    interpolator,blockshape,pad)
     yield from _recursive_generator_split(mid_frame, frame2, num_recursions - 1,
-                                    interpolator,blockshape)
+                                    interpolator,blockshape,pad)
 
 
 def interpolate_recursively_from_files(
     frames: List[str], times_to_interpolate: int,
-    interpolator: interpolator_lib.Interpolator, block=[0,0]) -> Iterable[np.ndarray]:
+    interpolator: interpolator_lib.Interpolator, block=[0,0], pad=[0,0]) -> Iterable[np.ndarray]:
   """Generates interpolated frames by repeatedly interpolating the midpoint.
 
   Loads the files on demand and uses the yield paradigm to return the frames
@@ -219,11 +223,11 @@ def interpolate_recursively_from_files(
     if block==[0,0]:
       yield from _recursive_generator(
           util.read_image(frames[i - 1]), util.read_image(frames[i]),
-          times_to_interpolate, interpolator)
+          times_to_interpolate, interpolator,pad)
     else:
       yield from _recursive_generator_split(
           util.read_image(frames[i - 1]), util.read_image(frames[i]),
-          times_to_interpolate, interpolator,block)
+          times_to_interpolate, interpolator,block,pad)
   # Separately yield the final frame.
   yield util.read_image(frames[-1])
 
