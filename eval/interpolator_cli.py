@@ -155,9 +155,9 @@ class ProcessDirectory(beam.DoFn):
       media.set_ffmpeg(ffmpeg_path)
 
   def process(self, directory: str):
-    print(type(_BLOCK.value),_BLOCK.value)
+    logging.info(type(_BLOCK.value),_BLOCK.value)
     try:
-      print(type(_BLOCK.value[1]),_BLOCK.value[1])
+      logging.info(type(_BLOCK.value[1]),_BLOCK.value[1])
     except:
       pass
     
