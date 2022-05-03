@@ -228,6 +228,7 @@ def interpolate_recursively_from_files(
       yield from _recursive_generator_split(
           util.read_image(frames[i - 1]), util.read_image(frames[i]),
           times_to_interpolate, interpolator,block,pad)
+      logging.info("Frame {} done".format(i))
   # Separately yield the final frame.
   yield util.read_image(frames[-1])
 
