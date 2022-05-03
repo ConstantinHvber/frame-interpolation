@@ -143,13 +143,6 @@ def _output_frames(frames: List[np.ndarray], frames_dir: str):
         os.path.join(frames_dir, f'frame_{idx:03d}.png'), frame)
   logging.info('Output frames saved in %s.', frames_dir)
 
-def printg():
-  print(type(_BLOCK.value),_BLOCK.value)
-  try:
-    print(type(_BLOCK.value[1]),_BLOCK.value[1])
-  except:
-    pass
-
 class ProcessDirectory(beam.DoFn):
   """DoFn for running the interpolator on a single directory at the time."""
 
@@ -162,6 +155,12 @@ class ProcessDirectory(beam.DoFn):
       media.set_ffmpeg(ffmpeg_path)
 
   def process(self, directory: str):
+    print(type(_BLOCK.value),_BLOCK.value)
+    try:
+      print(type(_BLOCK.value[1]),_BLOCK.value[1])
+    except:
+      pass
+    
     input_frames_list = [
         natsort.natsorted(tf.io.gfile.glob(f'{directory}/*.{ext}'))
         for ext in _INPUT_EXT
