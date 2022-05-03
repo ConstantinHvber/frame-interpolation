@@ -153,7 +153,7 @@ def _recursive_generator(
 
 def _recursive_generator_split(
     frame1: np.ndarray, frame2: np.ndarray, num_recursions: int,
-    interpolator: interpolator_lib.Interpolator, block=[4,4]
+    interpolator: interpolator_lib.Interpolator, blockshape=[4,4]
 ) -> Generator[np.ndarray, None, None]:
   """Splits halfway to repeatedly generate more frames.
 
@@ -174,8 +174,8 @@ def _recursive_generator_split(
     # and remove it afterwards.
     time = np.full(shape=(1,), fill_value=0.5, dtype=np.float32)
     ##
-    patches_1 = util.image_to_patches(frame1, block)
-    patches_2 = util.image_to_patches(frame2, block)
+    patches_1 = util.image_to_patches(frame1, blockshape)
+    patches_2 = util.image_to_patches(frame2, blockshape)
     
     output_patches = []
     for image_1, image_2 in zip(patches_1, patches_2):
@@ -184,12 +184,12 @@ def _recursive_generator_split(
       mid_patch = interpolator.interpolate(image_batch_1, image_batch_2, time)
       output_patches.append(mid_patch)
     output_patches = np.concatenate(output_patches, axis=0)
-    mid_frame = util.patches_to_image(output_patches, block)[0]
+    mid_frame = util.patches_to_image(output_patches, blockshape)[0]
     ##
     yield from _recursive_generator(frame1, mid_frame, num_recursions - 1,
-                                    interpolator,block)
+                                    interpolator,blockshape)
     yield from _recursive_generator(mid_frame, frame2, num_recursions - 1,
-                                    interpolator,block)
+                                    interpolator,blockshape)
 
 
 def interpolate_recursively_from_files(
