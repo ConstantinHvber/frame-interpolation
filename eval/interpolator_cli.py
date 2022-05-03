@@ -143,6 +143,12 @@ def _output_frames(frames: List[np.ndarray], frames_dir: str):
         os.path.join(frames_dir, f'frame_{idx:03d}.png'), frame)
   logging.info('Output frames saved in %s.', frames_dir)
 
+def printg():
+  print(type(_BLOCK.value),_BLOCK.value)
+  try:
+    print(type(_BLOCK.value[1]),_BLOCK.value[1])
+  except:
+    pass
 
 class ProcessDirectory(beam.DoFn):
   """DoFn for running the interpolator on a single directory at the time."""
