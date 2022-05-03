@@ -187,9 +187,9 @@ def _recursive_generator_split(
     output_patches = np.concatenate(output_patches, axis=0)
     mid_frame = util.patches_to_image(output_patches, blockshape)[0]
     ##
-    yield from _recursive_generator(frame1, mid_frame, num_recursions - 1,
+    yield from _recursive_generator_split(frame1, mid_frame, num_recursions - 1,
                                     interpolator,blockshape)
-    yield from _recursive_generator(mid_frame, frame2, num_recursions - 1,
+    yield from _recursive_generator_split(mid_frame, frame2, num_recursions - 1,
                                     interpolator,blockshape)
 
 
