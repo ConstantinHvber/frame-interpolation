@@ -72,9 +72,9 @@ def image_to_patches(image: np.ndarray, block_shape: List[int], _pad: List[int])
       with num_blocks = block_shape[0] * block_shape[1].
   """
   
-  paddings = 2*[_pad]
+  paddings = 2 * [[int(i) for i in _pad]]
   
-  block_height, block_width = block_shape
+  block_height, block_width = [int(i) for i in block_shape]
   num_blocks = block_height * block_width
 
   height, width, channel = image.shape[-3:]
@@ -108,9 +108,9 @@ def patches_to_image(patches: np.ndarray, block_shape: List[int], _pad : List[in
   Returns:
     The unfolded image shaped [B, H, W, C].
   """
-  paddings = 2 * [_pad]
+  paddings = 2 * [[int(i) for i in _pad]]
   
-  block_height, block_width = block_shape
+  block_height, block_width = [int(i) for i in block_shape]
   
 
   patch_height, patch_width, channel = patches.shape[-3:]
