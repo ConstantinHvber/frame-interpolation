@@ -1,8 +1,8 @@
 import argparse
-from gooey import Gooey
+from gooey import Gooey,GooeyParser
 @Gooey 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = GooeyParser(description="Image Interpolation")
     parser.add_argument("--pattern", default=None,
                         help="The pattern to determine the directories with the input frames.",type=str,dest="pattern")
     parser.add_argument("--model_path", default=None,
