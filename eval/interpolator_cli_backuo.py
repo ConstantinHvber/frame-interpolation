@@ -76,7 +76,6 @@ import mediapy as media
 import natsort
 import numpy as np
 import tensorflow as tf
-import argparse
 
 
 _PATTERN = flags.DEFINE_string(
@@ -122,29 +121,6 @@ _CUDAGPU = flags.DEFINE_string(
 # Add other extensions, if not either.
 _INPUT_EXT = ['png', 'jpg', 'jpeg']
 
-""" parser = argparse.ArgumentParser()
-parser.add_argument("--pattern", default=None,
-                    help="The pattern to determine the directories with the input frames.",type=str,dest="pattern")
-parser.add_argument("--model_path", default=None,
-                    help='The path of the TF2 saved model to use.',type=str,dest="model_path")
-parser.add_argument("--times_to_interpolate", default=5,
-                    help='The number of times to run recursive midpoint interpolation. '
-    'The number of output frames will be 2^times_to_interpolate+1.',type=int,dest="times_to_interpolate")
-parser.add_argument("--fps", default=30,
-                    help='Frames per second to play interpolated videos in slow motion.',type=int,dest="fps")
-parser.add_argument("--align", default=64,
-                    help='If >1, pad the input size so it is evenly divisible by this value.',type=int,dest="align")
-parser.add_argument("--output_video",
-                    help='If true, creates a video of the frames in the interpolated_frames/ '
-    'subdirectory',dest="output_video",action="store_true")
-parser.add_argument("--blockw", default=1,
-                    help='Width of patches.',type=int,dest="blockw")
-parser.add_argument("--blockh", default=1,
-                    help='Height of patches.',type=int,dest="blockh")
-parser.add_argument("--gpu", default=0,
-                    help='GPU to use',type=int,dest="gpu")
-args = parser.parse_args()
- """
 
 def _output_frames(frames: List[np.ndarray], frames_dir: str):
   """Writes PNG-images to a directory.

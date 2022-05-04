@@ -220,7 +220,7 @@ def interpolate_recursively_from_files(
   """
   n = len(frames)
   for i in range(1, n):
-    if block==[0,0]:
+    if block==[0,0] or block==[1,1]:
       yield from _recursive_generator(
           util.read_image(frames[i - 1]), util.read_image(frames[i]),
           times_to_interpolate, interpolator,block,pad)
