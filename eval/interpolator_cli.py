@@ -76,49 +76,8 @@ import mediapy as media
 import natsort
 import numpy as np
 import tensorflow as tf
-import argparse
+from Gooey import gooey,GooeyParser
 
-
-_PATTERN = flags.DEFINE_string(
-    name='pattern',
-    default=None,
-    help='The pattern to determine the directories with the input frames.',
-    required=True)
-_MODEL_PATH = flags.DEFINE_string(
-    name='model_path',
-    default=None,
-    help='The path of the TF2 saved model to use.')
-_TIMES_TO_INTERPOLATE = flags.DEFINE_integer(
-    name='times_to_interpolate',
-    default=5,
-    help='The number of times to run recursive midpoint interpolation. '
-    'The number of output frames will be 2^times_to_interpolate+1.')
-_FPS = flags.DEFINE_integer(
-    name='fps',
-    default=30,
-    help='Frames per second to play interpolated videos in slow motion.')
-_ALIGN = flags.DEFINE_integer(
-    name='align',
-    default=64,
-    help='If >1, pad the input size so it is evenly divisible by this value.')    
-_OUTPUT_VIDEO = flags.DEFINE_boolean(
-    name='output_video',
-    default=False,
-    help='If true, creates a video of the frames in the interpolated_frames/ '
-    'subdirectory')
-_BLOCK = flags.DEFINE_list(
-    name='block',
-    default=[0,0],
-    help='Splits images into smaller blocks with this size'
-    'subdirectory')
-_PADDING = flags.DEFINE_list(
-    name='pad',
-    default=[0,0],
-    help='Paddes the blocks')
-_CUDAGPU = flags.DEFINE_string(
-    name='gpu',
-    default="0",
-    help='The GPU the script will use')
 # Add other extensions, if not either.
 _INPUT_EXT = ['png', 'jpg', 'jpeg']
 
@@ -175,14 +134,14 @@ class ProcessDirectory(beam.DoFn):
 
   def setup(self):
     self.interpolator = interpolator_lib.Interpolator(
-        _MODEL_PATH.value, _ALIGN.value)
+        "./models/saved_model", 64)
 
-    if _OUTPUT_VIDEO.value:
+    if args.output_video:
       ffmpeg_path = util.get_ffmpeg_path()
       media.set_ffmpeg(ffmpeg_path)
 
   def process(self, directory: str):
-    os.environ["CUDA_VISIBLE_DEVICES"]=_CUDAGPU.value
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
     
     input_frames_list = [
         natsort.natsorted(tf.io.gfile.glob(f'{directory}/*.{ext}'))
@@ -192,15 +151,15 @@ class ProcessDirectory(beam.DoFn):
     logging.info('Generating in-between frames for %s.', directory)
     frames = list(
         util.interpolate_recursively_from_files(
-            input_frames, _TIMES_TO_INTERPOLATE.value, self.interpolator,_BLOCK.value,_PADDING.value))
+            input_frames, args.times_to_interpolate, self.interpolator,[args.block_width,args.block_height],[0,0]))
     _output_frames(frames, os.path.join(directory, 'interpolated_frames'))
-    if _OUTPUT_VIDEO.value:
-      media.write_video(f'{directory}/interpolated.mp4', frames, fps=_FPS.value)
+    if args.output_video:
+      media.write_video(f'{directory}/interpolated.mp4', frames, fps=args.fps)
       logging.info('Output video saved at %s/interpolated.mp4.', directory)
 
 
 def _run_pipeline() -> None:
-  directories = tf.io.gfile.glob(_PATTERN.value)
+  directories = tf.io.gfile.glob(args.pattern)
   pipeline = beam.Pipeline('DirectRunner')
   (pipeline | 'Create directory names' >> beam.Create(directories)  # pylint: disable=expression-not-assigned
    | 'Process directories' >> beam.ParDo(ProcessDirectory()))
@@ -208,10 +167,28 @@ def _run_pipeline() -> None:
   result = pipeline.run()
   result.wait_until_finish()
 
-
+@Gooey
 def main(argv: Sequence[str]) -> None:
+  global args
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
+  parser = GooeyParser(description="Image Interpolation")
+  parser.add_argument("--inputfolder", default=None,
+                      help="The folder to use as input.",type=str,dest="pattern",widget="DirChooser")
+  parser.add_argument("--times_to_interpolate", default=5,
+                      help= 'The number of output frames will be 2^times_to_interpolate+1.',type=int,dest="times_to_interpolate",widget="IntegerField")
+  parser.add_argument("--fps", default=30,
+                      help='Frames per second to play interpolated videos in slow motion.',type=int,dest="fps",widget="IntegerField")
+  parser.add_argument("--output_video",
+                      help='If true, creates a video of the frames'
+      'subdirectory',dest="output_video",action="store_true",widget="BlockCheckbox")
+  parser.add_argument("--blockw", default=1,
+                      help='Width of patches.',type=int,dest="blockw")
+  parser.add_argument("--blockh", default=1,
+                      help='Height of patches.',type=int,dest="blockh")
+  parser.add_argument("--gpu", default=0,
+                      help='GPU to use',type=int,dest="gpu")
+  args = parser.parse_args()
   _run_pipeline()
 
 
