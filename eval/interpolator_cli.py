@@ -66,17 +66,17 @@ import functools
 import os
 from typing import List, Sequence
 
-from . import interpolator as interpolator_lib
-from . import util
+import interpolator as interpolator_lib
+import util
 from absl import app
-from absl import flags
+#from absl import flags
 from absl import logging
 import apache_beam as beam
 import mediapy as media
 import natsort
 import numpy as np
 import tensorflow as tf
-from Gooey import gooey,GooeyParser
+from gooey import Gooey,GooeyParser
 
 # Add other extensions, if not either.
 _INPUT_EXT = ['png', 'jpg', 'jpeg']
@@ -134,14 +134,14 @@ class ProcessDirectory(beam.DoFn):
 
   def setup(self):
     self.interpolator = interpolator_lib.Interpolator(
-        "./models/saved_model", 64)
+        "./saved_model", 64)
 
     if args.output_video:
       ffmpeg_path = util.get_ffmpeg_path()
       media.set_ffmpeg(ffmpeg_path)
 
   def process(self, directory: str):
-    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
     
     input_frames_list = [
         natsort.natsorted(tf.io.gfile.glob(f'{directory}/*.{ext}'))
@@ -151,7 +151,7 @@ class ProcessDirectory(beam.DoFn):
     logging.info('Generating in-between frames for %s.', directory)
     frames = list(
         util.interpolate_recursively_from_files(
-            input_frames, args.times_to_interpolate, self.interpolator,[args.block_width,args.block_height],[0,0]))
+            input_frames, args.times_to_interpolate, self.interpolator,[args.blockw,args.blockh],[0,0]))
     _output_frames(frames, os.path.join(directory, 'interpolated_frames'))
     if args.output_video:
       media.write_video(f'{directory}/interpolated.mp4', frames, fps=args.fps)
@@ -168,12 +168,10 @@ def _run_pipeline() -> None:
   result.wait_until_finish()
 
 @Gooey
-def main(argv: Sequence[str]) -> None:
+def main() -> None:
   global args
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
   parser = GooeyParser(description="Image Interpolation")
-  parser.add_argument("--inputfolder", default=None,
+  parser.add_argument("--pattern", default=None,
                       help="The folder to use as input.",type=str,dest="pattern",widget="DirChooser")
   parser.add_argument("--times_to_interpolate", default=5,
                       help= 'The number of output frames will be 2^times_to_interpolate+1.',type=int,dest="times_to_interpolate",widget="IntegerField")
@@ -183,9 +181,9 @@ def main(argv: Sequence[str]) -> None:
                       help='If true, creates a video of the frames'
       'subdirectory',dest="output_video",action="store_true",widget="BlockCheckbox")
   parser.add_argument("--blockw", default=1,
-                      help='Width of patches.',type=int,dest="blockw")
+                      help='Number of patches (Width)',type=int,dest="blockw")
   parser.add_argument("--blockh", default=1,
-                      help='Height of patches.',type=int,dest="blockh")
+                      help='Number of patches (Height)',type=int,dest="blockh")
   parser.add_argument("--gpu", default=0,
                       help='GPU to use',type=int,dest="gpu")
   args = parser.parse_args()
@@ -193,4 +191,4 @@ def main(argv: Sequence[str]) -> None:
 
 
 if __name__ == '__main__':
-  app.run(main)
+  main()

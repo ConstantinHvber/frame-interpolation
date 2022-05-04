@@ -17,8 +17,8 @@ import os
 import shutil
 from typing import Generator, Iterable, List
 
-from . import interpolator as interpolator_lib
-from . import util
+import interpolator as interpolator_lib
+import util
 import numpy as np
 import tensorflow as tf
 
